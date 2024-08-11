@@ -1,0 +1,158 @@
+# IMPORTANT NOTE: When updating the training model, you can, and should, safely delete the cache if there is currently one.
+
+import os
+import torch
+import torch.multiprocessing as mp
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, TextDataset, DataCollatorForLanguageModeling, Trainer, TrainingArguments
+
+mp.set_sharing_strategy('file_system')
+
+def fine_tune_model(dataset_path, output_dir, model_name='gpt2-medium', epochs=0):
+    #More Epochs = generally more coherent
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    model = GPT2LMHeadModel.from_pretrained(model_name)
+
+    # Print the first few lines of the dataset to ensure it's read correctly
+    with open(dataset_path, 'r', encoding='utf-8') as file:
+        for i in range(5):
+            print(f"Line {i+1}: {file.readline()}")
+
+    train_dataset = TextDataset(
+        tokenizer=tokenizer,
+        file_path=dataset_path,
+        block_size=128
+    )
+
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=False
+    )
+
+    training_args = TrainingArguments(
+        output_dir=output_dir,
+        overwrite_output_dir=False,  # Don't overwrite the output directory
+        num_train_epochs=epochs,
+        per_device_train_batch_size=1,  # Reduce the batch size to fit the model in GPU memory
+        gradient_accumulation_steps=8,  # Accumulate gradients over 8 steps
+        fp16=True,  # Enable mixed precision training
+        save_steps=10_000,
+        save_total_limit=2,
+        load_best_model_at_end=True,  # Load the best model at the end of training
+        metric_for_best_model="loss",  # Metric to use for selecting the best model
+        evaluation_strategy="steps",
+        eval_steps=1_000,  # Evaluate every 1,000 steps
+        save_strategy="steps",
+        logging_dir=f'{output_dir}/logs',  # Directory for storing logs
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=train_dataset,
+    )
+
+    # Check if there's a checkpoint to resume from
+    last_checkpoint = None
+    if os.path.isdir(output_dir) and os.listdir(output_dir):
+        # Find the last checkpoint
+        checkpoints = [os.path.join(output_dir, d) for d in os.listdir(output_dir) if d.startswith("checkpoint-")]
+        if checkpoints:
+            last_checkpoint = max(checkpoints, key=os.path.getctime)
+            print(f"Resuming from checkpoint: {last_checkpoint}")
+        else:
+            print("No checkpoint found, starting from scratch.")
+    else:
+        print("Starting from scratch.")
+
+    if last_checkpoint:
+        trainer.train(resume_from_checkpoint=last_checkpoint)
+    else:
+        trainer.train()
+
+    trainer.save_model()
+
+    # Explicitly free up memory
+    del model
+    del trainer
+    torch.cuda.empty_cache()
+
+def generate_story(prompt, model_path, model_name='gpt2-medium', max_length=100, temperature=0.8, length_penalty=1.0):
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    model = GPT2LMHeadModel.from_pretrained(model_path).to('cuda' if torch.cuda.is_available() else 'cpu')
+
+    input_ids = tokenizer.encode(prompt, return_tensors="pt").to('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Input IDs: {input_ids}")
+
+    generated_story = ""
+    total_length = 0
+    max_iterations = 15  # To prevent infinite loops, set a max number of iterations
+    iteration = 0
+
+    while total_length < max_length and iteration < max_iterations:
+        output = model.generate(
+            input_ids,
+            max_length=len(input_ids[0]) + 128,  # Generate a chunk of 128 tokens
+            num_return_sequences=1,
+            temperature=temperature,
+            length_penalty=length_penalty,
+            no_repeat_ngram_size=3,  # To reduce repetitions, adjust this value as needed
+            pad_token_id=tokenizer.eos_token_id
+        )
+        print(f"Generated output: {output}")
+
+        chunk = tokenizer.decode(output[0], skip_special_tokens=True)
+        print(f"Generated chunk: {chunk}")
+
+        generated_story += chunk[len(prompt):]  # Append the generated chunk without the prompt
+        prompt = chunk[-128:]  # Use the last 128 tokens as the new prompt
+        input_ids = tokenizer.encode(prompt, return_tensors="pt").to('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Updated prompt: {prompt}")
+
+        total_length += len(chunk.split())
+        iteration += 1
+
+    return generated_story
+
+def main():
+    dataset_path = 'testtext.txt'  # Replace with the path to your text file containing the stories
+    output_dir = 'fine_tuned_model'
+    model_name = 'gpt2-medium'
+    initial_prompt = "Instruction: " #Put Instructions for Prompts here         
+    output_file = 'generated_story.txt' #This is the text file it generates.
+    max_file_length = 1000  # Maximum length of the generated story file in characters
+
+    # Fine-tune the model
+    fine_tune_model(dataset_path, output_dir, model_name=model_name)
+
+    # Initialize the prompt
+    prompt = initial_prompt
+
+    # Generate and extend the story iteratively
+    while True:
+        # Check current length of the output file
+        if os.path.exists(output_file):
+            with open(output_file, 'r', encoding='utf-8') as file:
+                current_length = len(file.read())
+        else:
+            current_length = 0
+
+        if current_length >= max_file_length:
+            print("Reached maximum file length. Stopping generation.")
+            break
+
+        story = generate_story(prompt, output_dir, model_name=model_name, max_length=1000)
+        print("Generated Story:")
+        print(story)
+
+        # Save the generated story to a file
+        with open(output_file, 'a', encoding='utf-8') as file:
+            file.write(story + '\n')
+
+        # Update the prompt with the new story
+        with open(output_file, 'r', encoding='utf-8') as file:
+            prompt = file.read().strip()[-1024:]  # Use the last 1024 characters as the new prompt
+
+if __name__ == "__main__":
+    main()
