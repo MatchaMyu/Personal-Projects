@@ -1,1 +1,3 @@
-*.py linguist-language=Java
+*.java linguist-language=Java
+*.jar  linguist-vendored
+*.zip  linguist-vendored
