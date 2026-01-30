@@ -1,0 +1,23 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+.env
+
+# ===== Java =====
+*.class
+*.jar
+*.war
+*.ear
+target/
+out/
+
+# ===== OS / Editor junk =====
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
