@@ -16,5 +16,4 @@ qemu-system-x86_64 \
   -cdrom "$ISO" \
   -boot d \
   -no-reboot \
-  -monitor none \
-  -device usb-tablet
+  -monitor none
