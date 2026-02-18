@@ -1,5 +1,3 @@
-roadmap
-
 OS development roadmap.
 End Goal Definition: "It runs Doom."
 
@@ -19,4 +17,5 @@ DOOM
 
 What is NOT needed:
 These would make things too complex.
+
 Advanced GUI is a bit much. Command prompt similar style screen works, so long as it can launch DOOM. (Many OSes are capable of doing this without a GUI)
