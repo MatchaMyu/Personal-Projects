@@ -4,9 +4,8 @@ SECTIONS
 {
   . = 1M;
 
-  .text : { *(.multiboot) *(.text*) }
+  .text : { KEEP(*(.multiboot)) *(.text*) }
   .rodata : { *(.rodata*) }
   .data : { *(.data*) }
   .bss : { *(.bss*) *(COMMON) }
 }
-
