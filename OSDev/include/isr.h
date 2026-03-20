@@ -12,3 +12,7 @@ typedef struct regs {
 } regs_t;
 
 void isr_common_handler(regs_t* r);
+void isr_install(void);
+typedef void (*isr_t)(regs_t*);
+extern isr_t interrupt_handlers[256];
+void register_interrupt_handler(uint8_t n, isr_t handler);

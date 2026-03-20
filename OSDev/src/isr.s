@@ -1,9 +1,18 @@
 BITS 32
 GLOBAL idt_load
+
+;Already NASM-style, no need to refer to .global and .extern
+
+; ISR load...
 GLOBAL isr0, isr1, isr2, isr3, isr4, isr5, isr6, isr7
 GLOBAL isr8, isr9, isr10, isr11, isr12, isr13, isr14, isr15
 GLOBAL isr16, isr17, isr18, isr19, isr20, isr21, isr22, isr23
 GLOBAL isr24, isr25, isr26, isr27, isr28, isr29, isr30, isr31
+
+; IRQ load...
+GLOBAL irq0, irq1, irq2, irq3, irq4, irq5, irq6, irq7
+GLOBAL irq8, irq9, irq10, irq11, irq12, irq13, irq14, irq15
+
 
 extern isr_common_handler
 
@@ -15,14 +24,22 @@ isr%1:
     cli
     push dword 0        ; fake error code
     push dword %1       ; vector number
-    jmp isr_common_stub
+    jmp interrupt_common_stub
 %endmacro
 
 %macro ISR_ERR 1
 isr%1:
     cli
     push dword %1       ; vector number (CPU already pushed error code)
-    jmp isr_common_stub
+    jmp interrupt_common_stub
+%endmacro
+
+%macro IRQ 2
+irq%1:
+    cli
+    push dword 0
+    push dword %2
+    jmp interrupt_common_stub
 %endmacro
 
 ; ------------------------
@@ -30,10 +47,8 @@ isr%1:
 ; Stack on entry:
 ;  - For NOERR: [vec][err=0] already pushed by us
 ;  - For ERR:   [vec] pushed by us, and CPU pushed [err] earlier
-;
-; We build a consistent "register frame" and pass a pointer to C.
 ; ------------------------
-isr_common_stub:
+interrupt_common_stub:
     pusha                   ; EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX (in that order on stack)
     push ds
     push es
@@ -57,7 +72,6 @@ isr_common_stub:
     popa
 
     add esp, 8              ; drop [vector] and [error_code]
-    ;sti (Still setting up exceptions/IRQs...)
     iret
 
 ; ------------------------
@@ -100,8 +114,33 @@ ISR_NOERR 29
 ISR_NOERR 30
 ISR_NOERR 31
 
-; void idt_load(const idt_ptr_t* ptr)
+; -------------
+;Define IRQs
+;-----------
+
+IRQ 0, 32
+IRQ 1, 33
+IRQ 2, 34
+IRQ 3, 35
+IRQ 4, 36
+IRQ 5, 37
+IRQ 6, 38
+IRQ 7, 39
+IRQ 8, 40
+IRQ 9, 41
+IRQ 10, 42
+IRQ 11, 43
+IRQ 12, 44
+IRQ 13, 45
+IRQ 14, 46
+IRQ 15, 47
+
+;----------
+; Load IDT
+;---------
 idt_load:
     mov eax, [esp + 4]
     lidt [eax]
     ret
+
+

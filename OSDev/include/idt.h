@@ -15,5 +15,6 @@ typedef struct __attribute__((packed)) {
 } idt_ptr_t;
 
 void idt_init(void);
+void idt_install_exceptions(void);
 void idt_set_gate(uint8_t vec, uint32_t handler, uint16_t sel, uint8_t flags);
 

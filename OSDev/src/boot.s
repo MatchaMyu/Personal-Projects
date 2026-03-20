@@ -6,6 +6,8 @@
 
 BITS 32
 
+; - This is the multiboot header. This is the kernel image.
+
 SECTION .multiboot
 align 4
 dd 0x1BADB002            ; magic
@@ -14,9 +16,10 @@ dd -(0x1BADB002 + 0x00000000) ; checksum
 
 SECTION .text
 global _start
-extern kernel_main
+extern kernel_main ; Calls kernel_main located in file "kernel.c"
 
 _start:
+    ; clear interrupt flag
     cli
     lgdt [gdt_descriptor]
 
@@ -38,6 +41,7 @@ flush_cs:
     ; Call C kernel
     call kernel_main
 
+; The code above goes into kernel_main. If it returns here, the system is halted
 .hang:
     hlt
     jmp .hang
