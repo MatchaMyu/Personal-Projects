@@ -21,18 +21,26 @@ X Halts after UD2 Exception and DE Exception
 
 X Displays errors in a new screen including hex code (Currently mostly unreadable to a person, but begins the procedure to map the code to faults)
 
+X PIC Remapping
+
+X IRQ Handling (Timers, display timers)
+
+X Keyboard Recongition
+
+X 1 basic shell command
+
 NEXT:
-PIC remapping
-IRQ Handling (Timers)
-Keyboard Recognition.
-Basic SHELL commands.
+More Basic SHELL commands.
+Memory management.
 Advanced SHELL commands. (Changing color of text?)
+Graphic management (Basic. 320x200)
 Hardware Identifiers (Basic, does not have to USE them, just IDENTIFY them)
 DOOM Port. (GOAL. genericdoom)
 
 LONG TERM:
 Whatis hardware command (Detects current hardware signatures)
 File system
+Super Mario Brothers
 
 What is NOT needed:
 These would make things too complex.
