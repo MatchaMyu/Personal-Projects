@@ -9,28 +9,36 @@ Timing is also an issue. I don't have a deadline for this. I also don't have the
 
 Steps:
 
-X Get a bootable OS.
+X Multiboot memory map parsing
 
-X Global Descriptor Table
+X Basic physical memory detection
 
-X IDT load Entries (prints proof)
+X VGA text output + cursor/backspace support
 
-X Prints CPU Errors from table.
+X Exception panic screen with register dump
 
-X Halts after UD2 Exception and DE Exception
+X PIC remapping
 
-X Displays errors in a new screen including hex code (Currently mostly unreadable to a person, but begins the procedure to map the code to faults)
+X IRQ handling
 
-X PIC Remapping
+X PIT timer display
 
-X IRQ Handling (Timers, display timers)
+X Timer converted to seconds/real time
 
-X Keyboard Recongition
+X Keyboard input handling
 
-X 1 basic shell command
+X Basic shell with multiple commands
+
+X Heap allocator with kmalloc/kfree
+
+X Heap test and memory stats
+
+X Virtual paging initialized
+
+X Page fault handler / halt screen
 
 NEXT:
-More Basic SHELL commands.
+Page fault 
 Memory management.
 Advanced SHELL commands. (Changing color of text?)
 Graphic management (Basic. 320x200)

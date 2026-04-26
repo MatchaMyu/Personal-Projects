@@ -1,1 +1,8 @@
 A log of creating an Operating System. Or at least, bits and pieces of an operating system.
+
+While the operating system is minimal, it's currently ran under a VM in debian and is not guaranteed to be functional when trying a USB version of the ISO, or stable.
+
+HOW TO:
+The OS includes a Makefile that, if exported, should run under the commands:
+make
+make run
