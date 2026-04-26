@@ -39,6 +39,8 @@ flush_cs:
     mov esp, stack_top
 
     ; Call C kernel
+    push ebx ; Argument 2 (multiboot_info pointer)
+    push eax ; Argument 1 (multiboot magic)
     call kernel_main
 
 ; The code above goes into kernel_main. If it returns here, the system is halted

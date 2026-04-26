@@ -4,7 +4,11 @@
 #include "irq.h"
 
 //contains isr_common_handler
-//contains crash code.
+//contains crash/panic code.
+
+//header
+void panic(const char* msg, regs_t* r);
+void page_fault_handler(regs_t* r);
 
 static const char* exception_names[32] = {
     "0 Divide Error (#DE)",
@@ -51,19 +55,47 @@ void register_interrupt_handler(uint8_t n, isr_t handler)
 void isr_common_handler(regs_t* r)
 {
    if (r->int_no == 3) {
-    vga_print_at("INT3 BREAKPOINT", 0x2F, 0, 24);
+    // Debug breakpoint (INT3)
+    // vga_print_at("INT3 BREAKPOINT", 0x2F, 0, 24);
     return;
+    }
+
+    if (r->int_no == 14) {
+        page_fault_handler(r);
+        return;
     }
 
     if (r->int_no >= 32 && r->int_no < 48) {
         irq_handler(r);
         return;
     }
+    panic("Unhandled exception",r);
+}
 
+void page_fault_handler(regs_t* r) {
+    uint32_t fault_addr;
+    __asm__ volatile("mov %%cr2, %0" : "=r"(fault_addr));
+
+    vga_print("PAGE FAULT\n");
+    vga_print("Fault address: ");
+    vga_print_hex32_cursor(fault_addr);
+    vga_print("\n");
+
+    vga_print("Error code: ");
+    vga_print_hex32_cursor(r->err_code);
+    vga_print("\n");
+
+    for (;;) {
+        __asm__ volatile("hlt");
+    }
+}
+
+void panic(const char* msg, regs_t* r) {
    //crash/panic
     vga_clear(0x4F);
     vga_print_at("==== SYSTEM HALTED ====", 0x4F, 28, 0);
 
+    if (r) {
     uint32_t n = r->int_no;
     if (n < 32) {
         vga_print_at(exception_names[n], 0x0C, 11, 2);
@@ -71,31 +103,44 @@ void isr_common_handler(regs_t* r)
         vga_print_at("Unknown exception vector", 0x0C, 11, 2);
     }
 
-    vga_print_at("int_no:", 0x0F, 0, 5);
-    vga_print_hex32(r->int_no, 0x0F, 8, 5);
+    vga_print_at("Vector:", 0x0F, 0, 4); //Int_no
+    vga_print_hex32(r->int_no, 0x0F, 8, 4);
 
-    vga_print_at("err:", 0x0F, 0, 6);
-    vga_print_hex32(r->err_code, 0x0F, 8, 6);
+    vga_print_at("Error:", 0x0F, 0, 5); //Error
+    vga_print_hex32(r->err_code, 0x0F, 8, 5);
 
-    vga_print_at("EIP:", 0x0F, 0, 7);
-    vga_print_hex32(r->eip, 0x0F, 8, 7);
+    vga_print_at("At EIP:", 0x0F, 0, 6);
+    vga_print_hex32(r->eip, 0x0F, 8, 6);
 
-    vga_print_at("CS:", 0x0F, 0, 8);
-    vga_print_hex32(r->cs, 0x0F, 8, 8);
+    vga_print_at("--- CPU STATE ---", 0x0E, 0, 8);
 
-    vga_print_at("EFLAGS:", 0x0F, 0, 9);
-    vga_print_hex32(r->eflags, 0x0F, 8, 9);
+    vga_print_at("CS:", 0x0F, 0, 9);
+    vga_print_hex32(r->cs, 0x0F, 8, 9);
 
-    vga_print_at("EAX:", 0x0F, 0, 10); vga_print_hex32(r->eax, 0x0F, 8, 10);
-    vga_print_at("EBX:", 0x0F, 0, 11); vga_print_hex32(r->ebx, 0x0F, 8, 11);
-    vga_print_at("ECX:", 0x0F, 0, 12); vga_print_hex32(r->ecx, 0x0F, 8, 12);
-    vga_print_at("EDX:", 0x0F, 0, 13); vga_print_hex32(r->edx, 0x0F, 8, 13);
+    vga_print_at("EFLAGS:", 0x0F, 0, 10);
+    vga_print_hex32(r->eflags, 0x0F, 8, 10);
 
-    vga_print_at("ESI:", 0x0F, 0, 14); vga_print_hex32(r->esi, 0x0F, 8, 14);
-    vga_print_at("EDI:", 0x0F, 0, 15); vga_print_hex32(r->edi, 0x0F, 8, 15);
-    vga_print_at("EBP:", 0x0F, 0, 16); vga_print_hex32(r->ebp, 0x0F, 8, 16);
-    vga_print_at("ESP:", 0x0F, 0, 17); vga_print_hex32(r->esp, 0x0F, 8, 17);
+    vga_print_at("EAX:", 0x0F, 0, 12); vga_print_hex32(r->eax, 0x0F, 8, 12);
+    vga_print_at("EBX:", 0x0F, 0, 13); vga_print_hex32(r->ebx, 0x0F, 8, 13);
+    vga_print_at("ECX:", 0x0F, 0, 14); vga_print_hex32(r->ecx, 0x0F, 8, 14);
+    vga_print_at("EDX:", 0x0F, 0, 15); vga_print_hex32(r->edx, 0x0F, 8, 15);
+
+    vga_print_at("ESI:", 0x0F, 20, 12); vga_print_hex32(r->esi, 0x0F, 28, 12);
+    vga_print_at("EDI:", 0x0F, 20, 13); vga_print_hex32(r->edi, 0x0F, 28, 13);
+    vga_print_at("EBP:", 0x0F, 20, 14); vga_print_hex32(r->ebp, 0x0F, 28, 14);
+    vga_print_at("ESP:", 0x0F, 20, 15); vga_print_hex32(r->esp, 0x0F, 28, 15);
+    } else {
+    vga_print_at("Reason:", 0x0F, 0, 2);
+    vga_print_at("Manual Pony Prompted Panic", 0x0C, 8, 2);
+
+    vga_print_at("Source:", 0x0F, 0, 4);
+    vga_print_at("Shell command", 0x0F, 8, 4);
+
+    vga_print_at("Action:", 0x0F, 0, 5);
+    vga_print_at("System halted by user", 0x0F, 8, 5);
+    }
 
     vga_print_at("=== SYSTEM HALTED ===", 0x4F, 28, 20);
+
     for (;;) { __asm__ __volatile__("cli; hlt"); }
 }

@@ -43,13 +43,13 @@ void draw_uptime(void)
     uint32_t minutes = (g_seconds % 3600) / 60;
     uint32_t seconds = g_seconds % 60;
 
-    vga_print_at("Uptime: ", 0x0F, 0, 23);
+    vga_print_at("Uptime: ", 0x0F, 0, 0);
 
-    vga_print_uint_at(hours, 0x0F, 8, 23);
-    vga_print_at(":", 0x0F, 10, 23);
+    vga_print_uint_at(hours, 0x0F, 8, 0);
+    vga_print_at(":", 0x0F, 10, 0);
 
-    vga_print_uint_at(minutes, 0x0F, 11, 23);
-    vga_print_at(":", 0x0F, 13, 23);
+    vga_print_uint_at(minutes, 0x0F, 11, 0);
+    vga_print_at(":", 0x0F, 13, 0);
 
-    vga_print_uint_at(seconds, 0x0F, 14, 23);
+    vga_print_uint_at(seconds, 0x0F, 14, 0);
 }

@@ -93,6 +93,6 @@ void idt_install_exceptions(void)
     idt_set_gate(27,  (uint32_t)isr27,  0x08, 0x8E);
     idt_set_gate(28,  (uint32_t)isr28,  0x08, 0x8E);
     idt_set_gate(29,  (uint32_t)isr29,  0x08, 0x8E);
-    idt_set_gate(30,  (uint32_t)isr31,  0x08, 0x8E);
+    idt_set_gate(30,  (uint32_t)isr30,  0x08, 0x8E);
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
 }

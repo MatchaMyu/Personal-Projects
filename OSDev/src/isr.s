@@ -2,6 +2,7 @@ BITS 32
 GLOBAL idt_load
 
 ;Already NASM-style, no need to refer to .global and .extern
+;todo: rename .s files to .asm. Optional.
 
 ; ISR load...
 GLOBAL isr0, isr1, isr2, isr3, isr4, isr5, isr6, isr7

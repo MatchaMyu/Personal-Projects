@@ -1,25 +1,62 @@
 #include "shell.h"
 #include "vga.h"
 #include "keyboard.h"
+#include "commands.h"
 
 void draw_uptime(void);
 
-void process_command(char *input);
+int shell_row = 8; //This will need to be changed
 
-static int shell_row = 10; //This will need to be changed
-
-int strcmp(const char *a, const char *b) {
-    while (*a && *b) {
-        if (*a != *b) return 0;
-        a++;
-        b++;
+//For clear command
+void shell_clear(void) {
+    for (int row = 8; row <= 23; row++) {
+        for (int col = 0; col < 80; col++) {
+            vga_print_at(" ", 0x0F, col, row);
+        }
     }
-    return (*a == *b);
+
+    shell_row = 8;
+    vga_set_cursor_pos(2, shell_row);
+}
+//End Clear command
+
+//Scrolling
+void shell_scroll(void) {
+    volatile unsigned short *vga = (volatile unsigned short *)0xB8000;
+
+    for (int row = 8; row < 23; row++) {
+        for (int col = 0; col < 80; col++) {
+            vga[row * 80 + col] = vga[(row + 1) * 80 + col];
+        }
+    }
+
+    for (int col = 0; col < 80; col++) {
+        vga[23 * 80 + col] = (0x0F << 8) | ' ';
+    }
+}
+//End Scrolling
+
+void shell_print(const char *text) {
+    vga_print(text);
+    //vga_put_char('\n');
+
+    shell_row = vga_get_cursor_y();
+
+    if (shell_row > 23) {
+        shell_scroll();
+        shell_row = 23;
+    }
 }
 
 void shell_run(void) {
     while (1) {
-        keyboard_reset_buffer();
+
+        if (shell_row > 22) {
+            shell_scroll();
+	    shell_row = 22;
+        }
+
+	keyboard_reset_buffer();
 
         vga_print_at("> ", 0x0F, 0, shell_row);
         vga_set_cursor_pos(2, shell_row);
@@ -27,22 +64,16 @@ void shell_run(void) {
         while (!keyboard_input_ready())  {
 	__asm__ __volatile__("hlt");
         }
+	shell_row++;
+	vga_set_cursor_pos(0, shell_row);
 
 	process_command(keyboard_get_buffer());
 
-	shell_row += 2;
+	shell_row = vga_get_cursor_y();
 
-        if (shell_row >= 22) {
-            shell_row = 10;   // temporary wraparound
-        }
+	if (vga_get_cursor_x() != 0) {
+    	shell_row++;
+		}
+	}
 
-    }
-}
-
-void process_command(char *input) {
-    if (strcmp(input, "version")) {
-        vga_print_at("EquineOS v0.01", 0x0F, 0, shell_row + 1);
-    } else {
-        vga_print_at("Neigh, that is not a valid command.", 0x0F, 0, shell_row + 1);
-    }
 }

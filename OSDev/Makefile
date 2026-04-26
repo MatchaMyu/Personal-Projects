@@ -27,7 +27,13 @@ OBJS = $(BUILD_DIR)/boot.o \
        $(BUILD_DIR)/ports.o \
        $(BUILD_DIR)/timer.o \
        $(BUILD_DIR)/keyboard.o \
-       $(BUILD_DIR)/shell.o
+       $(BUILD_DIR)/shell.o \
+       $(BUILD_DIR)/commands.o \
+       $(BUILD_DIR)/memory.o \
+       $(BUILD_DIR)/heap.o \
+       $(BUILD_DIR)/paging.o \
+       $(BUILD_DIR)/paging_asm.o
+
 
 all: $(KERNEL) $(ISO_OUT)
 
@@ -50,9 +56,17 @@ $(BUILD_DIR)/boot.o: src/boot.s | $(BUILD_DIR)
 $(BUILD_DIR)/isr.o: src/isr.s | $(BUILD_DIR)
 	$(ASM) $(ASFLAGS) $< -o $@
 
+$(BUILD_DIR)/paging_asm.o: src/paging.asm | $(BUILD_DIR)
+	$(ASM) $(ASFLAGS) $< -o $@
+
 #Shell
 $(BUILD_DIR)/shell.o: src/shell/shell.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+#Commands
+$(BUILD_DIR)/commands.o: src/shell/commands.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
 
 # C sources
 $(BUILD_DIR)/kernel.o: src/kernel.c | $(BUILD_DIR)
@@ -82,6 +96,16 @@ $(BUILD_DIR)/keyboard.o: src/keyboard.c | $(BUILD_DIR)
 $(BUILD_DIR)/vga.o: src/vga.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/memory.o: src/memory.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/heap.o: src/heap.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/paging.o: src/paging.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
 clean:
 	rm -rf $(BUILD_DIR)
 
@@ -93,3 +117,5 @@ re: clean all
 #Run
 run: $(ISO_OUT)
 	qemu-system-i386 -m 256M -cdrom $(ISO_OUT) -boot d -no-reboot -no-shutdown -display curses
+
+# 256M = Memory allocated. Increased to 1024 with no issues.
