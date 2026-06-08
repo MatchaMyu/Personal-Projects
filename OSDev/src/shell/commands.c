@@ -4,6 +4,8 @@
 #include "isr.h"
 #include "memory.h"
 #include "heap.h"
+#include "console.h"
+#include "graphics.h"
 
 extern int shell_row;
 
@@ -18,20 +20,22 @@ int strcmp(const char *a, const char *b) { //Technically compares wrong.
 
 //Command list
 void cmd_version(void) {
-    shell_print("EquineOS v0.01");
+    console_write("EquineOS v0.01\n");
 }
 
 void cmd_clear(void) {
-    shell_clear();
+    console_clear();
 }
 
 void cmd_echo(char *args) {
-    shell_print(args);
+    console_write(args);
+    console_write("\n");
 }
 
 //Heap Test Command
 static void cmd_heaptest(void) {
-    vga_print("=== HEAP TEST START ===\n");
+    console_write("\n");
+    console_write("=== HEAP TEST START ===\n");
 
     void* a = kmalloc(16);
     void* b = kmalloc(32);
@@ -42,29 +46,29 @@ static void cmd_heaptest(void) {
     char buf[11];
 
     if (!a || !b || !c) {
-        vga_print("Heap allocation failed.\n");
-        vga_print("=== HEAP TEST FAILED ===\n");
+        console_write("Heap allocation failed.\n");
+        console_write("=== HEAP TEST FAILED ===\n");
         return;
     }
 
-    vga_print("Allocated blocks:\n");
+    console_write("Allocated blocks:\n");
 
 
-    vga_print("  a = ");
-    vga_print_hex32_cursor((uint32_t)a);
-    vga_print("\n");
+    console_write("  a = ");
+    console_print_hex32((uint32_t)a);
+    console_write("\n");
 
-    vga_print("  b = ");
-    vga_print_hex32_cursor((uint32_t)b);
-    vga_print("\n");
+    console_write("  b = ");
+    console_print_hex32((uint32_t)b);
+    console_write("\n");
 
-    vga_print("  c = ");
-    vga_print_hex32_cursor((uint32_t)c);
-    vga_print("\n");
+    console_write("  c = ");
+    console_print_hex32((uint32_t)c);
+    console_write("\n");
 
-    vga_print("  d = ");
-    vga_print_hex32_cursor((uint32_t)d);
-    vga_print("\n");
+    console_write("  d = ");
+    console_print_hex32((uint32_t)d);
+    console_write("\n");
 
     uint8_t* pa = (uint8_t*)a;
     uint8_t* pb = (uint8_t*)b;
@@ -87,19 +91,19 @@ static void cmd_heaptest(void) {
     }
 
     if (ok) {
-        vga_print("Pattern verification passed.\n");
+        console_write("Pattern verification passed.\n");
     } else {
-        vga_print("Pattern verification FAILED.\n");
+        console_write("Pattern verification FAILED.\n");
     }
 
     kfree(b);
-    vga_print("Freed block B.\n");
+    console_write("Freed block B.\n");
 
     e = kmalloc(24);
 
-    vga_print("Allocated e = ");
-    vga_print_hex32_cursor((uint32_t)e);
-    vga_print("\n");
+    console_write("Allocated e = ");
+    console_print_hex32((uint32_t)e);
+    console_write("\n");
 
     uint8_t* pe = (uint8_t*)e;
     for (int i = 0; i < 24; i++) {
@@ -117,14 +121,14 @@ static void cmd_heaptest(void) {
 	}
 
     if (a_ok && c_ok) {
-    	vga_print("Neighbor integrity passed.\n");
+    	console_write("Neighbor integrity passed.\n");
     } else {
-    	vga_print("Neighbor integrity FAILED.\n");
-        if (!a_ok) vga_print("  A corrupted\n");
-        if (!c_ok) vga_print("  C corrupted\n");
+    	console_write("Neighbor integrity FAILED.\n");
+        if (!a_ok) console_write("  A corrupted\n");
+        if (!c_ok) console_write("  C corrupted\n");
 	}
 
-    vga_print("=== HEAP TEST END ===\n");
+    console_write("=== HEAP TEST END ===\n");
 }
 
 
@@ -148,43 +152,56 @@ void process_command(char *input) {
     if (strcmp(input, "version")) {
         cmd_version();
     } 
+
     else if (strcmp(input, "echo")) {
         cmd_echo(args);
     }
+
     else if (strcmp(input, "clear")) {
         cmd_clear();
     } 
+
     else if (strcmp(input, "heap")) {
     cmd_heaptest();
     return; 
     }
+
+    else if (strcmp(input, "app")) {
+        console_write("Starting app...\n");
+
+        run_test_app();
+
+        console_write("App exited cleanly.\n");
+        return;
+    }
+
     else if (strcmp(input, "mem")) {
     mem_stats_t stats;
     char buf[32];
 
     mem_get_stats(&stats);
 
-    shell_print("Heap stats:\n");
+    console_write("Heap stats:\n");
 
-    shell_print("Used bytes: ");
-    vga_print_uint(stats.used_bytes);
-    vga_print("\n");
+    console_write("Used bytes: ");
+    console_print_uint(stats.used_bytes);
+    console_write("\n");
 
-    shell_print("Free bytes: ");
-    vga_print_uint(stats.free_bytes);
-    vga_print("\n");
+    console_write("Free bytes: ");
+    console_print_uint(stats.free_bytes);
+    console_write("\n");
 
-    shell_print("Blocks: ");
-    vga_print_uint(stats.block_count);
-    vga_print("\n");
+    console_write("Blocks: ");
+    console_print_uint(stats.block_count);
+    console_write("\n");
 
-    shell_print("Free blocks: ");
-    vga_print_uint(stats.free_block_count);
-    vga_print("\n");
+    console_write("Free blocks: ");
+    console_print_uint(stats.free_block_count);
+    console_write("\n");
 
-    shell_print("Largest free block: ");
-    vga_print_uint(stats.largest_free_block);
-    vga_print("\n");
+    console_write("Largest free block: ");
+    console_print_uint(stats.largest_free_block);
+    console_write("\n");
 
     } else if (strcmp(input, "heap")) {
     char buf[32];
@@ -192,37 +209,37 @@ void process_command(char *input) {
     uint32_t end   = heap_get_end();
     uint32_t limit = heap_get_limit();
 
-    shell_print("Heap info:\n");
+    console_write("Heap info:\n");
 
-    shell_print("Start: ");
-    vga_print_hex32_cursor(start);
-    shell_print("\n");
+    console_write("Start: ");
+    console_print_hex32(start);
+    console_write("\n");
 
-    shell_print("End: ");
-    vga_print_hex32_cursor(end);
-    shell_print("\n");
+    console_write("End: ");
+    console_print_hex32(end);
+    console_write("\n");
 
-    shell_print("Limit: ");
-    vga_print_hex32_cursor(limit);
-    shell_print("\n");
+    console_write("Limit: ");
+    console_print_hex32(limit);
+    console_write("\n");
 
-    shell_print("Consumed bytes: ");
-    vga_print_uint(end - start);
-    shell_print("\n");
+    console_write("Consumed bytes: ");
+    console_print_uint(end - start);
+    console_write("\n");
 
-    shell_print("Remaining bytes: ");
-    vga_print_uint(limit - end);
-    shell_print("\n");
+    console_write("Remaining bytes: ");
+    console_print_uint(limit - end);
+    console_write("\n");
 
     return;
     }//Panic command
      else if (strcmp(input, "panic")) {
-	panic("This should not print", 0);
+	panic("Manual Pony Prompted Panic", 0);
 	return;
 	}
     //Invalid command.
     else {
-        shell_print("Neigh, that is not a valid command.");
+        console_write("Neigh, that is not a valid command.\n");
     }
 
 }

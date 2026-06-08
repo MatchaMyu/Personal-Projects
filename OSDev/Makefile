@@ -5,7 +5,7 @@ CC       = gcc
 LD       = ld
 GRUBMK   = grub-mkrescue
 
-CFLAGS   = -m32 -ffreestanding -fno-pic -fno-pie -nostdlib -nostartfiles -nodefaultlibs -Iinclude
+CFLAGS   = -m32 -ffreestanding -fno-pic -fno-pie -nostdlib -nostartfiles -nodefaultlibs -Iinclude -Isrc
 KFLAGS   = $(CFLAGS) -g -O0 -fno-omit-frame-pointer
 ASFLAGS  = -f elf32
 LDFLAGS  = -m elf_i386 -T linker/linker.ld
@@ -13,6 +13,7 @@ LDFLAGS  = -m elf_i386 -T linker/linker.ld
 ISO_DIR  = iso
 BOOT_DIR = $(ISO_DIR)/boot
 BUILD_DIR = build
+BOOT_SRC = src/boot.s
 KERNEL   = $(BUILD_DIR)/kernel.elf
 ISO_OUT  = $(BUILD_DIR)/myuos.iso
 
@@ -32,8 +33,14 @@ OBJS = $(BUILD_DIR)/boot.o \
        $(BUILD_DIR)/memory.o \
        $(BUILD_DIR)/heap.o \
        $(BUILD_DIR)/paging.o \
-       $(BUILD_DIR)/paging_asm.o
-
+       $(BUILD_DIR)/paging_asm.o \
+       $(BUILD_DIR)/string.o \
+       $(BUILD_DIR)/graphics.o \
+       $(BUILD_DIR)/serial.o \
+       $(BUILD_DIR)/font8x8.o \
+       $(BUILD_DIR)/console.o \
+       $(BUILD_DIR)/gfx_shell.o \
+       $(BUILD_DIR)/test_app.o
 
 all: $(KERNEL) $(ISO_OUT)
 
@@ -50,7 +57,7 @@ $(ISO_OUT): $(KERNEL) | $(BUILD_DIR)
 	$(GRUBMK) -o $@ $(ISO_DIR)
 
 # Assembly sources
-$(BUILD_DIR)/boot.o: src/boot.s | $(BUILD_DIR)
+$(BUILD_DIR)/boot.o: $(BOOT_SRC) | $(BUILD_DIR)
 	$(ASM) $(ASFLAGS) $< -o $@
 
 $(BUILD_DIR)/isr.o: src/isr.s | $(BUILD_DIR)
@@ -58,6 +65,9 @@ $(BUILD_DIR)/isr.o: src/isr.s | $(BUILD_DIR)
 
 $(BUILD_DIR)/paging_asm.o: src/paging.asm | $(BUILD_DIR)
 	$(ASM) $(ASFLAGS) $< -o $@
+
+$(BUILD_DIR)/serial.o: src/serial.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 #Shell
 $(BUILD_DIR)/shell.o: src/shell/shell.c | $(BUILD_DIR)
@@ -67,6 +77,8 @@ $(BUILD_DIR)/shell.o: src/shell/shell.c | $(BUILD_DIR)
 $(BUILD_DIR)/commands.o: src/shell/commands.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/console.o: src/shell/console.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # C sources
 $(BUILD_DIR)/kernel.o: src/kernel.c | $(BUILD_DIR)
@@ -105,6 +117,22 @@ $(BUILD_DIR)/heap.o: src/heap.c | $(BUILD_DIR)
 $(BUILD_DIR)/paging.o: src/paging.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(BUILD_DIR)/string.o: src/string.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+#Graphics
+
+$(BUILD_DIR)/graphics.o: src/graphics.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/font8x8.o: src/font8x8.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/test_app.o: src/apps/test_app.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/gfx_shell.o: src/gfx_shell.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -115,7 +143,14 @@ re: clean all
 .PHONY: all clean re
 
 #Run
-run: $(ISO_OUT)
-	qemu-system-i386 -m 256M -cdrom $(ISO_OUT) -boot d -no-reboot -no-shutdown -display curses
+run: clean
+	$(MAKE) BOOT_SRC=src/boot.s $(ISO_OUT)
+	qemu-system-i386 -m 256M -cdrom $(ISO_OUT) -boot d -no-reboot -no-shutdown -serial stdio -vga std -display gtk
+
+
+run-text: BOOT_SRC = src/boot_text.s
+run-text: clean
+	$(MAKE) BOOT_SRC=src/boot_text.s $(ISO_OUT)
+	qemu-system-i386 -m 256M -cdrom $(ISO_OUT) -boot d -no-reboot -no-shutdown -serial stdio -vga std
 
 # 256M = Memory allocated. Increased to 1024 with no issues.

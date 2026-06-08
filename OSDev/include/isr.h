@@ -17,4 +17,6 @@ typedef void (*isr_t)(regs_t*);
 extern isr_t interrupt_handlers[256];
 void register_interrupt_handler(uint8_t n, isr_t handler);
 void page_fault_handler(regs_t* r);
-void panic(const char* msg, regs_t* r); // Free to remove if you add a dedicated panic.c
+
+void panic(const char* msg, regs_t* r); // Free to remove when adding a panic.c
+extern volatile int kernel_panicking; //Also free to remove when adding a panic.c

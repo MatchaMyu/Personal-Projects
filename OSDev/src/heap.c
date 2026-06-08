@@ -1,11 +1,14 @@
 #include "heap.h"
+#include "isr.h"
 
 #define MIN_SPLIT_SIZE 8 //Defines minimum split size
+#define HEAP_CANARY 0xDEADBEEF
 
 //Block header
 typedef struct block_header {
     uint32_t magic;
     uint32_t size;
+    uint32_t requested_size;
     uint32_t free;
     struct block_header* next;
 } block_header_t;
@@ -59,13 +62,14 @@ static void split_block(block_header_t* block, uint32_t size) {
 static block_header_t* create_block(uint32_t size) {
     uint32_t total_size = sizeof(block_header_t) + size;
 
-    if (heap_end > heap_limit) return 0;
+    if (heap_end >= heap_limit) return 0;
     if (total_size > heap_limit - heap_end) return 0;
 
     block_header_t* block = (block_header_t*)heap_end;
 
     block->magic = ALLOC_MAGIC;
     block->size = size;
+    block->requested_size = 0;
     block->free = 0;
     block->next = 0;
 
@@ -118,21 +122,32 @@ static void coalesce_free_blocks(void) {
 void* kmalloc(uint32_t size) {
     if (size == 0) return 0;
 
-    if (size > 0xFFFFFFFF - 7) return 0;
-    uint32_t aligned_size = (size + 7) & ~7;
+    if (size > 0xFFFFFFFF - sizeof(uint32_t) - 7) return 0;
+
+    uint32_t requested_size = size;
+    uint32_t aligned_size = (size + sizeof(uint32_t) + 7) & ~7;
 
     block_header_t* block = find_free_block(aligned_size);
 
     if (block) {
         split_block(block, aligned_size);
         block->free = 0;
-        return (void*)((uint32_t)block + sizeof(block_header_t));
+        block->requested_size = requested_size;
+
+        void* user_ptr = (void*)((uint32_t)block + sizeof(block_header_t));
+        uint32_t* canary = (uint32_t*)((uint32_t)user_ptr + requested_size);
+        *canary = HEAP_CANARY;
+
+        return user_ptr;
     }
 
     block = create_block(aligned_size);
+
     if (!block) {
         return 0;
     }
+
+    block->requested_size = requested_size;
 
     if (!heap_head) {
         heap_head = block;
@@ -144,7 +159,12 @@ void* kmalloc(uint32_t size) {
         current->next = block;
     }
 
-    return (void*)((uint32_t)block + sizeof(block_header_t));
+    void* user_ptr = (void*)((uint32_t)block + sizeof(block_header_t));
+    uint32_t* canary = (uint32_t*)((uint32_t)user_ptr + requested_size);
+    *canary = HEAP_CANARY;
+
+    return user_ptr;
+
 }
 
 //kfree
@@ -154,12 +174,19 @@ void kfree(void* ptr) {
     block_header_t* block =
         (block_header_t*)((uint32_t)ptr - sizeof(block_header_t));
 
+    uint32_t* canary =
+        (uint32_t*)((uint32_t)ptr + block->requested_size);
+
+    if (*canary != HEAP_CANARY) {
+        panic("Heap overflow detected", 0);
+    }
+
     if (block->magic != ALLOC_MAGIC) {
-        return; // or panic
+        panic("Invalid free detected", 0);
     }
 
     if (block->free) {
-        return; // double free
+        panic("Double free detected", 0);
     }
 
     block->free = 1;

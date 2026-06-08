@@ -2,6 +2,7 @@
 #include "paging.h"
 #include "heap.h"
 #include "vga.h"
+#include "multiboot.h"
 
 #define PAGE_SIZE 4096
 #define PAGE_PRESENT 0x1
@@ -12,7 +13,7 @@
 extern void load_page_directory(uint32_t* page_directory);
 extern void enable_paging(void);
 
-void paging_init(void) {
+void paging_init(multiboot_info_t* mbi) {
     uint32_t raw = (uint32_t)kmalloc(8192 + 4096);
     uint32_t aligned = ALIGN_UP(raw, 4096);
 
@@ -29,6 +30,23 @@ void paging_init(void) {
     }
 
     page_directory[0] = ((uint32_t)first_page_table) | PAGE_PRESENT | PAGE_RW;
+
+    uint32_t* fb_page_table = (uint32_t*)ALIGN_UP((uint32_t)kmalloc(4096 +  4096), 4096);
+
+    for (int i = 0; i < 1024; i++) {
+    fb_page_table[i] = 0;
+    }
+
+    uint32_t fb_base = (uint32_t)mbi->framebuffer_addr;
+
+    uint32_t fb_dir_index = fb_base >> 22;
+    uint32_t fb_table_base = fb_base & 0xFFC00000;
+
+    for (int i = 0; i < 1024; i++) {
+    fb_page_table[i] = (fb_table_base + i * PAGE_SIZE) | PAGE_PRESENT | PAGE_RW;
+    }
+
+    page_directory[fb_dir_index] = ((uint32_t)fb_page_table) | PAGE_PRESENT |   PAGE_RW;
 
     load_page_directory(page_directory);
     enable_paging();

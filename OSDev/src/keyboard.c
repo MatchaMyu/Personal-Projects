@@ -1,7 +1,9 @@
 #include "keyboard.h"
+#include "gfx_shell.h"
 #include "vga.h"
 #include "ports.h"
 #include <stdint.h>
+
 
 static int shift_pressed = 0;
 static char input_buffer[256];
@@ -118,6 +120,8 @@ void keyboard_handler(void)
         input_buffer[input_pos] = '\0';
         input_done = 1;
         // optional: move cursor to next line or print newline behavior
+        //gfx_shell_input_char('\n');
+        console_putc('\n');
         return;
     }
 
@@ -126,8 +130,7 @@ void keyboard_handler(void)
         if (input_pos > 0) {
             input_pos--;
             input_buffer[input_pos] = '\0';
-            vga_put_char('\b');
-
+            console_putc('\b');
         }
         return;
     }
@@ -147,7 +150,7 @@ void keyboard_handler(void)
     if (input_pos < 255) {
 	input_buffer[input_pos++] = c;
 	input_buffer[input_pos] = '\0';
-	vga_put_char(c);
+	console_putc(c);
     }
 
 }

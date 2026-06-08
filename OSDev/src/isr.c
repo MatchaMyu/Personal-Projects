@@ -9,6 +9,7 @@
 //header
 void panic(const char* msg, regs_t* r);
 void page_fault_handler(regs_t* r);
+volatile int kernel_panicking = 0;
 
 static const char* exception_names[32] = {
     "0 Divide Error (#DE)",
@@ -94,6 +95,7 @@ void panic(const char* msg, regs_t* r) {
    //crash/panic
     vga_clear(0x4F);
     vga_print_at("==== SYSTEM HALTED ====", 0x4F, 28, 0);
+    kernel_panicking = 1;
 
     if (r) {
     uint32_t n = r->int_no;
@@ -131,13 +133,18 @@ void panic(const char* msg, regs_t* r) {
     vga_print_at("ESP:", 0x0F, 20, 15); vga_print_hex32(r->esp, 0x0F, 28, 15);
     } else {
     vga_print_at("Reason:", 0x0F, 0, 2);
-    vga_print_at("Manual Pony Prompted Panic", 0x0C, 8, 2);
+
+    if (msg) {
+        vga_print_at(msg, 0x0C, 8, 2);
+    } else {
+        vga_print_at("Unknown kernel panic", 0x0C, 8, 2);
+    }
 
     vga_print_at("Source:", 0x0F, 0, 4);
-    vga_print_at("Shell command", 0x0F, 8, 4);
+    vga_print_at("Kernel", 0x0F, 8, 4);
 
     vga_print_at("Action:", 0x0F, 0, 5);
-    vga_print_at("System halted by user", 0x0F, 8, 5);
+    vga_print_at("System halted", 0x0F, 8, 5);
     }
 
     vga_print_at("=== SYSTEM HALTED ===", 0x4F, 28, 20);

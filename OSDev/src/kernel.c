@@ -13,6 +13,11 @@
 #include "memory.h"
 #include "heap.h"
 #include "paging.h"
+#include "string.h"
+#include "graphics.h"
+#include "serial.h"
+#include "gfx_shell.h"
+#include "shell/console.h"
 
 static void dump_idtr();
 static void draw_boot_screen(void);
@@ -24,9 +29,43 @@ static inline void trigger_bp(void) {
 void print_multiboot_memory_map(multiboot_info_t* mbi); //Logic in memory.c
 
 void kernel_main(uint32_t magic, multiboot_info_t* mbi) { //Probably change magic
-    vga_clear(0x0F);
 
-    // light magenta / pink-ish text = 0x0F
+    serial_init();
+
+    serial_write("Kernel reached\n");
+
+    serial_write("magic: ");
+    serial_write_hex32(magic);
+    serial_write("\n");
+
+    serial_write("flags: ");
+    serial_write_hex32(mbi->flags);
+    serial_write("\n");
+
+    serial_write("fb type: ");
+    serial_write_hex32(mbi->framebuffer_type);
+    serial_write("\n");
+
+    serial_write("fb bpp: ");
+    serial_write_hex32(mbi->framebuffer_bpp);
+    serial_write("\n");
+
+    serial_write("fb width: ");
+    serial_write_hex32(mbi->framebuffer_width);
+    serial_write("\n");
+
+    serial_write("fb height: ");
+    serial_write_hex32(mbi->framebuffer_height);
+    serial_write("\n");
+
+    serial_write("fb pitch: ");
+    serial_write_hex32(mbi->framebuffer_pitch);
+    serial_write("\n");
+
+    serial_write("fb addr low: ");
+    serial_write_hex32((uint32_t)mbi->framebuffer_addr);
+    serial_write("\n");
+
     vga_print("Booting EquineOS...\n");
 
     idt_init();
@@ -48,19 +87,47 @@ void kernel_main(uint32_t magic, multiboot_info_t* mbi) { //Probably change magi
 
     print_multiboot_memory_map(mbi);
 
-    paging_init();
+    paging_init(mbi);
     vga_print("Paging Successful\n");
 
     vga_print("If this prints, you survived the boot load process!\n");
 
-    //Boots into OS. Comment out for debug testing.
+if (mbi->flags & MULTIBOOT_INFO_FRAMEBUFFER) {
+    
+    vga_print("FB type: ");
+    vga_print_hex32_cursor(mbi->framebuffer_type);
+    vga_print("\n");
 
+    vga_print("FB bpp: ");
+    vga_print_hex32_cursor(mbi->framebuffer_bpp);
+    vga_print("\n");
+
+    vga_print("FB width: ");
+    vga_print_hex32_cursor(mbi->framebuffer_width);
+    vga_print("\n");
+
+    vga_print("FB height: ");
+    vga_print_hex32_cursor(mbi->framebuffer_height);
+    vga_print("\n");
+
+    vga_print("FB addr low: ");
+    vga_print_hex32_cursor((uint32_t)mbi->framebuffer_addr);
+    vga_print("\n");
+}
+
+int graphics_enabled = gfx_init(mbi); //Graphics checker in gfx
+
+if (graphics_enabled) {
+    gfx_shell_init();
+    console_set_mode(CONSOLE_MODE_GFX);
+} else {
+    console_set_mode(CONSOLE_MODE_VGA);
     vga_clear(0x0F);
     timer_init(100);
     draw_boot_screen();
     draw_uptime();
     shell_run();
-
+}
 
     // halt forever
     for (;;) { __asm__ __volatile__("hlt"); }

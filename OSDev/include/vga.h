@@ -20,5 +20,8 @@ int vga_get_cursor_x(void);
 int vga_get_cursor_y(void);
 void vga_set_cursor_pos(int x, int y);
 
+void u32_to_dec_string(uint32_t value, char* str);
+void u32_to_hex_string(uint32_t v, char* buf);
+
 /* Screen control */
 void vga_clear(uint8_t color);

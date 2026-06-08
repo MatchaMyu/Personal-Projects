@@ -2,6 +2,8 @@
 #include "vga.h"
 #include "keyboard.h"
 #include "commands.h"
+#include "gfx_shell.h"
+#include "isr.h"
 
 void draw_uptime(void);
 
@@ -19,6 +21,7 @@ void shell_clear(void) {
     vga_set_cursor_pos(2, shell_row);
 }
 //End Clear command
+
 
 //Scrolling
 void shell_scroll(void) {
@@ -38,9 +41,8 @@ void shell_scroll(void) {
 
 void shell_print(const char *text) {
     vga_print(text);
-    //vga_put_char('\n');
 
-    shell_row = vga_get_cursor_y();
+    //shell_row = vga_get_cursor_y();
 
     if (shell_row > 23) {
         shell_scroll();

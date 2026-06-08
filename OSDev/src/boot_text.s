@@ -3,35 +3,33 @@
 ; - Runs in 32-bit protected mode. (Indicated by BITS 32)
 ; - Calls the C entry using "extern kernel_main"
 ; - Long term goal: Switch to long mode and jump to 64-bit entry
-; - GRAPHICS MODE. This is the boot.s file that uses graphics.
 
 BITS 32
 
-;This is for TEXT MODE ONLY.
-;SECTION .multiboot
-; text mode
-;align 4
-;dd 0x1BADB002
-;dd 0x00000003
-;dd -(0x1BADB002 + 0x00000003)
-
 SECTION .multiboot
-;graphics mode
+; text mode
 align 4
 dd 0x1BADB002
-dd 0x00000007            ; flags: align modules + memory info + video mode
-dd -(0x1BADB002 + 0x00000007) ; checksum ;change to 03 for text.
+dd 0x00000003
+dd -(0x1BADB002 + 0x00000003)
 
-dd 0                       ; header_addr
-dd 0                       ; load_addr
-dd 0                       ; load_end_addr
-dd 0                       ; bss_end_addr
-dd 0                       ; entry_addr
+;SECTION .multiboot
+;graphics mode
+;align 4;
+;dd 0x1BADB002
+;dd 0x00000007            ; flags: align modules + memory info + video mode
+;dd -(0x1BADB002 + 0x00000007) ; checksum ;change to 03 for text.
 
-dd 0                       ; mode_type: 0 = graphics
-dd 640                    ; width
-dd 480                     ; height
-dd 32                      ; depth
+;dd 0                       ; header_addr
+;dd 0                       ; load_addr
+;dd 0                       ; load_end_addr
+;dd 0                       ; bss_end_addr
+;dd 0                       ; entry_addr
+
+;dd 0                       ; mode_type: 0 = graphics
+;dd 640                    ; width
+;dd 480                     ; height
+;dd 32                      ; depth
 
 SECTION .text
 global _start

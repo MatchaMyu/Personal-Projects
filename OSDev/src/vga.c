@@ -225,7 +225,10 @@ void vga_print_uint(uint32_t value)
 void vga_print_hex32(uint32_t value, uint8_t color, int x, int y) {
     char buffer[11];
     u32_to_hex_string(value, buffer);
-    vga_print_at(buffer, color, x, y);
+
+    for (int i = 0; buffer[i] != '\0'; i++) {
+        vga_putc_at(buffer[i], color, x + i, y);
+    }
 }
 
 void vga_print_hex32_cursor(uint32_t value) {

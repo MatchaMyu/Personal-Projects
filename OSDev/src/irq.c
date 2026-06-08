@@ -4,6 +4,7 @@
 #include "vga.h"
 #include "ports.h"
 #include "keyboard.h"
+#include "isr.h" //panic code.
 
 // Assembly IRQ stubs
 extern void irq0(void);
@@ -46,6 +47,9 @@ void irq_install(void) {
 
 void irq_handler(regs_t* r)
 {
+    if (kernel_panicking) {
+        return;
+    }
     uint32_t irq = r->int_no - 32;
 
     if (irq == 1) {
